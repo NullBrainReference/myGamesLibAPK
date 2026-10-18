@@ -8,7 +8,8 @@ data class LoginRequest(
 data class UserDto(
     val id: Int,
     val name: String,
-    val email: String
+    val email: String,
+    val role: String
 )
 
 data class AuthResponse(

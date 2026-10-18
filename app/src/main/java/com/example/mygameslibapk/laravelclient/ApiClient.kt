@@ -31,6 +31,36 @@ interface ApiService {
     @Headers("Accept: application/json")
     @GET("projects/{id}")
     suspend fun getProjectDetails(@Path("id") id: Int): Response<ProjectDto>
+
+    // Hire Positions & Applications
+    @Headers("Accept: application/json")
+    @GET("projects/{id}/vacancies")
+    suspend fun getVacancies(@Path("id") projectId: Int): Response<ApiResponse<HirePositionDto>>
+
+    @Headers("Accept: application/json")
+    @POST("projects/{id}/vacancies")
+    suspend fun createVacancy(
+        @Path("id") projectId: Int,
+        @Body request: CreatePositionRequest
+    ): Response<ApiResponse<HirePositionDto>>
+
+    @Headers("Accept: application/json")
+    @POST("positions/{id}/apply")
+    suspend fun applyForPosition(
+        @Path("id") positionId: Int,
+        @Body request: ApplyTicketRequest
+    ): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @GET("projects/{id}/vacancies/applicants")
+    suspend fun getApplicants(@Path("id") projectId: Int): Response<ApiResponse<PositionTicketDto>>
+
+    @Headers("Accept: application/json")
+    @POST("tickets/{id}/review")
+    suspend fun reviewTicket(
+        @Path("id") ticketId: Int,
+        @Body request: ReviewTicketRequest
+    ): Response<ApiResponse<Unit>>
 }
 
 object ApiClient {

@@ -47,7 +47,14 @@ fun RootApp() {
             )
         }
         composable("main") {
-            MainScreen()
+            MainScreen(
+                onLogout = {
+                    navController.navigate("login") {
+                        // Clear main screens off the backstack so pressing 'Back' cannot re-enter
+                        popUpTo("main") { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
