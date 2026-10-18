@@ -25,7 +25,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     fun performLogin(onSuccess: () -> Unit) {
-        if (email.isBlank() || password.isBlank()) {
+        val cleanEmail = email.trim().lowercase()
+        val cleanPassword = password.trim()
+
+        if (cleanEmail.isBlank() || cleanPassword.isBlank()) {
             uiState = LoginUiState.Error("Please fill in all fields")
             return
         }
@@ -34,7 +37,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
-                val response = ApiClient.instance.login(LoginRequest(email, password))
+                // Pass Application context to getService to attach headers/tokens
+                val apiService = ApiClient.getService(getApplication())
+                val response = apiService.login(LoginRequest(cleanEmail, cleanPassword))
 
                 if (response.isSuccessful && response.body()?.token != null) {
                     val token = response.body()!!.token!!
@@ -42,7 +47,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     uiState = LoginUiState.Success
                     onSuccess()
                 } else {
-                    val errorMsg = if (response.code() == 403) {
+                    // Extract detailed error body to pinpoint exact Laravel message
+                    val rawError = response.errorBody()?.string()
+                    val errorMsg = if (!rawError.isNullOrBlank()) {
+                        "HTTP ${response.code()}: $rawError"
+                    } else if (response.code() == 403) {
                         "Account is banned."
                     } else {
                         "Invalid credentials"
