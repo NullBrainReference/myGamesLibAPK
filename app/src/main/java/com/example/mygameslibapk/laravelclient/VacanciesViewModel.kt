@@ -77,11 +77,65 @@ class VacanciesViewModel(application: Application) : AndroidViewModel(applicatio
                 )
 
                 if (response.isSuccessful) {
-                    actionMessage = "Position created!"
+                    actionMessage = "Position published successfully!"
                     loadVacancies(projectId)
                     onComplete()
                 } else {
                     actionMessage = "Failed to create position."
+                }
+            } catch (e: Exception) {
+                actionMessage = "Error: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun requestMoreTickets(
+        projectId: Int,
+        positionId: Int,
+        quantity: Int,
+        reason: String,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val apiService = ApiClient.getService(getApplication())
+                val response = apiService.requestMoreTickets(
+                    projectId,
+                    RequestMoreTicketsRequest(positionId, quantity, reason)
+                )
+
+                if (response.isSuccessful) {
+                    actionMessage = "Ticket extension request sent to admins."
+                    onComplete()
+                } else {
+                    actionMessage = "Failed to submit ticket extension request."
+                }
+            } catch (e: Exception) {
+                actionMessage = "Error: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun requestPositionSlots(
+        projectId: Int,
+        title: String,
+        quantity: Int,
+        reason: String,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val apiService = ApiClient.getService(getApplication())
+                val response = apiService.requestPositionSlots(
+                    projectId,
+                    RequestPositionSlotsRequest(title, quantity, reason)
+                )
+
+                if (response.isSuccessful) {
+                    actionMessage = "Position slot request sent to admins!"
+                    onComplete()
+                } else {
+                    actionMessage = "Failed to submit position slot request."
                 }
             } catch (e: Exception) {
                 actionMessage = "Error: ${e.localizedMessage}"

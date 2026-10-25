@@ -21,7 +21,7 @@ import com.example.mygameslibapk.laravelclient.ProfileViewModel
 @Composable
 fun MainScreen(
     profileViewModel: ProfileViewModel = viewModel(),
-    onLogout: () -> Unit = {} // <--- Added onLogout parameter
+    onLogout: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -69,11 +69,12 @@ fun MainScreen(
             startDestination = Screen.Projects.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // Projects List Route
             composable(Screen.Projects.route) {
                 ProjectsScreen(
                     currentUser = currentUser,
-                    onNavigateToVacancies = { projectId ->
-                        navController.navigate("projects/$projectId/vacancies")
+                    onNavigateToVacancies = { projectId, isOwnerOrAdmin ->
+                        navController.navigate("projects/$projectId/vacancies/$isOwnerOrAdmin")
                     },
                     onNavigateToApplicants = { projectId ->
                         navController.navigate("projects/$projectId/applicants")
@@ -81,12 +82,16 @@ fun MainScreen(
                 )
             }
 
+            // Vacancies Route with correct isOwnerOrAdmin parameter
             composable(
-                route = "projects/{projectId}/vacancies",
-                arguments = listOf(navArgument("projectId") { type = NavType.IntType })
+                route = "projects/{projectId}/vacancies/{isOwnerOrAdmin}",
+                arguments = listOf(
+                    navArgument("projectId") { type = NavType.IntType },
+                    navArgument("isOwnerOrAdmin") { type = NavType.BoolType }
+                )
             ) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getInt("projectId") ?: return@composable
-                val isOwnerOrAdmin = currentUser?.role == "admin"
+                val isOwnerOrAdmin = backStackEntry.arguments?.getBoolean("isOwnerOrAdmin") ?: false
 
                 VacanciesScreen(
                     projectId = projectId,
@@ -100,15 +105,46 @@ fun MainScreen(
                 arguments = listOf(navArgument("projectId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getInt("projectId") ?: return@composable
+                ApplicantsScreen(projectId = projectId, onBack = { navController.popBackStack() })
+            }
 
-                ApplicantsScreen(
-                    projectId = projectId,
+            // Messages Screen
+            composable(Screen.Messages.route) {
+                MessagesScreen(
+                    onOpenChat = { userId, userName ->
+                        navController.navigate("chat/$userId/$userName")
+                    }
+                )
+            }
+
+            // Friends Screen
+            composable(Screen.Friends.route) {
+                FriendsScreen(
+                    onOpenChat = { userId, userName ->
+                        navController.navigate("chat/$userId/$userName")
+                    }
+                )
+            }
+
+            // Direct One-on-One Chat Screen
+            composable(
+                route = "chat/{userId}/{userName}",
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.IntType },
+                    navArgument("userName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val targetUserId = backStackEntry.arguments?.getInt("userId") ?: return@composable
+                val targetUserName = backStackEntry.arguments?.getString("userName") ?: "Chat"
+
+                ChatScreen(
+                    targetUserId = targetUserId,
+                    targetUserName = targetUserName,
+                    currentUserId = currentUser?.id,
                     onBack = { navController.popBackStack() }
                 )
             }
 
-            composable(Screen.Messages.route) { MessagesScreen() }
-            composable(Screen.Friends.route) { FriendsScreen() }
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     profileViewModel = profileViewModel,

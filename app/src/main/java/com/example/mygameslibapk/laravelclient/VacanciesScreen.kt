@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +28,9 @@ fun VacanciesScreen(
 ) {
     val context = LocalContext.current
     var selectedPositionToApply by remember { mutableStateOf<HirePositionDto?>(null) }
+    var selectedPositionToExtend by remember { mutableStateOf<HirePositionDto?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showSlotRequestDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectId) {
         viewModel.loadVacancies(projectId)
@@ -47,6 +50,13 @@ fun VacanciesScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isOwnerOrAdmin) {
+                        TextButton(onClick = { showSlotRequestDialog = true }) {
+                            Text("Request Slots")
+                        }
                     }
                 }
             )
@@ -69,13 +79,27 @@ fun VacanciesScreen(
                 is VacanciesUiState.Error -> Text(text = state.message, modifier = Modifier.align(Alignment.Center))
                 is VacanciesUiState.Success -> {
                     if (state.positions.isEmpty()) {
-                        Text("No open positions available.", modifier = Modifier.align(Alignment.Center))
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("No open positions available.")
+                            if (isOwnerOrAdmin) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { showSlotRequestDialog = true }) {
+                                    Text("Request Position Slots from Admin")
+                                }
+                            }
+                        }
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(state.positions) { position ->
+                                val takenTickets = position.tickets.size
+                                val hasCapacity = takenTickets < position.ticketsAmount
+
                                 Card(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(position.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -84,7 +108,6 @@ fun VacanciesScreen(
 
                                         Spacer(modifier = Modifier.height(8.dp))
 
-                                        // Skills list
                                         if (position.skills.isNotEmpty()) {
                                             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                 position.skills.forEach { skill ->
@@ -101,11 +124,26 @@ fun VacanciesScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                "Ticket Capacity: ${position.ticketsAmount}",
-                                                style = MaterialTheme.typography.labelMedium
+                                                "Capacity: $takenTickets / ${position.ticketsAmount}",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = if (hasCapacity) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                                             )
-                                            Button(onClick = { selectedPositionToApply = position }) {
-                                                Text("Apply Now")
+
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                if (isOwnerOrAdmin) {
+                                                    OutlinedButton(onClick = { selectedPositionToExtend = position }) {
+                                                        Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text("Request Tickets", style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                }
+
+                                                Button(
+                                                    onClick = { selectedPositionToApply = position },
+                                                    enabled = hasCapacity
+                                                ) {
+                                                    Text(if (hasCapacity) "Apply Now" else "Full")
+                                                }
                                             }
                                         }
                                     }
@@ -151,7 +189,69 @@ fun VacanciesScreen(
         )
     }
 
-    // Create Vacancy Dialog
+    // Request Ticket Capacity Extension Dialog
+    selectedPositionToExtend?.let { position ->
+        var quantity by remember { mutableStateOf("2") }
+        var reason by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { selectedPositionToExtend = null },
+            title = { Text("Extend Tickets for ${position.title}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Additional Tickets Quantity") })
+                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason for Admins") }, minLines = 2)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.requestMoreTickets(projectId, position.id, quantity.toIntOrNull() ?: 1, reason) {
+                            selectedPositionToExtend = null
+                        }
+                    },
+                    enabled = reason.trim().length >= 10
+                ) {
+                    Text("Submit Request")
+                }
+            },
+            dismissButton = { TextButton(onClick = { selectedPositionToExtend = null }) { Text("Cancel") } }
+        )
+    }
+
+    // Request New Position Slots Dialog
+    if (showSlotRequestDialog) {
+        var positionTitle by remember { mutableStateOf("") }
+        var quantity by remember { mutableStateOf("1") }
+        var reason by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showSlotRequestDialog = false },
+            title = { Text("Request Position Slots") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = positionTitle, onValueChange = { positionTitle = it }, label = { Text("Requested Position Title (e.g. 3D Artist)") })
+                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Quantity") })
+                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason for Admins") }, minLines = 2)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.requestPositionSlots(projectId, positionTitle, quantity.toIntOrNull() ?: 1, reason) {
+                            showSlotRequestDialog = false
+                        }
+                    },
+                    enabled = positionTitle.isNotBlank() && reason.trim().length >= 10
+                ) {
+                    Text("Submit Slot Request")
+                }
+            },
+            dismissButton = { TextButton(onClick = { showSlotRequestDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    // Create Vacancy Direct Dialog
     if (showCreateDialog) {
         var title by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }

@@ -30,6 +30,18 @@ data class PositionTicketDto(
     val position: HirePositionDto? = null
 )
 
+data class RequestMoreTicketsRequest(
+    @SerializedName("hire_position_id") val hirePositionId: Int,
+    val quantity: Int,
+    val reason: String
+)
+
+data class RequestPositionSlotsRequest(
+    val title: String,
+    val quantity: Int,
+    val reason: String
+)
+
 data class CreatePositionRequest(
     val title: String,
     val description: String,

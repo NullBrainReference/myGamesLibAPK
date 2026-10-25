@@ -25,7 +25,7 @@ import com.example.mygameslibapk.laravelclient.UserDto
 @Composable
 fun ProjectsScreen(
     currentUser: UserDto? = null,
-    onNavigateToVacancies: (projectId: Int) -> Unit = {},
+    onNavigateToVacancies: (projectId: Int, isOwnerOrAdmin: Boolean) -> Unit = { _, _ -> },
     onNavigateToApplicants: (projectId: Int) -> Unit = {},
     viewModel: ProjectsViewModel = viewModel()
 ) {
@@ -72,7 +72,10 @@ fun ProjectsScreen(
                                 ProjectCard(
                                     project = project,
                                     currentUser = currentUser,
-                                    onManageVacancies = { onNavigateToVacancies(project.id) },
+                                    onManageVacancies = {
+                                        val isOwnerOrAdmin = currentUser?.role == "admin" || project.owners.any { it.id == currentUser?.id }
+                                        onNavigateToVacancies(project.id, isOwnerOrAdmin)
+                                    },
                                     onManageApplicants = { onNavigateToApplicants(project.id) },
                                     onOpenChat = {
                                         Toast.makeText(context, "Project Chat coming soon!", Toast.LENGTH_SHORT).show()

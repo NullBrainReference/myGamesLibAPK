@@ -6,6 +6,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
@@ -61,10 +62,56 @@ interface ApiService {
         @Path("id") ticketId: Int,
         @Body request: ReviewTicketRequest
     ): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @GET("messages/conversations")
+    suspend fun getConversations(): Response<ConversationsResponse>
+
+    @Headers("Accept: application/json")
+    @GET("messages/{userId}")
+    suspend fun getChatMessages(@Path("userId") userId: Int): Response<ChatThreadResponse>
+
+    @Headers("Accept: application/json")
+    @POST("messages/{userId}")
+    suspend fun sendMessage(
+        @Path("userId") userId: Int,
+        @Body request: SendMessageRequest
+    ): Response<ApiResponse<MessageDto>>
+
+    // Friends Endpoints
+    @Headers("Accept: application/json")
+    @GET("friends")
+    suspend fun getFriends(): Response<FriendsListResponse>
+
+    @Headers("Accept: application/json")
+    @POST("friends/{userId}/request")
+    suspend fun sendFriendRequest(@Path("userId") userId: Int): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @POST("friends/{userId}/accept")
+    suspend fun acceptFriendRequest(@Path("userId") userId: Int): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @DELETE("friends/{userId}")
+    suspend fun removeFriend(@Path("userId") userId: Int): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @POST("projects/{projectId}/request-tickets")
+    suspend fun requestMoreTickets(
+        @Path("projectId") projectId: Int,
+        @Body request: RequestMoreTicketsRequest
+    ): Response<ApiResponse<Unit>>
+
+    @Headers("Accept: application/json")
+    @POST("projects/{projectId}/request-position-slots")
+    suspend fun requestPositionSlots(
+        @Path("projectId") projectId: Int,
+        @Body request: RequestPositionSlotsRequest
+    ): Response<ApiResponse<Unit>>
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://192.168.1.47:8000/api/"
+    private const val BASE_URL = "http://127.0.0.1:8000/api/"
 
     fun getService(context: Context): ApiService {
         val tokenManager = TokenManager(context)
