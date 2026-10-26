@@ -96,7 +96,11 @@ fun MainScreen(
                 VacanciesScreen(
                     projectId = projectId,
                     isOwnerOrAdmin = isOwnerOrAdmin,
-                    onBack = { navController.popBackStack() }
+                    currentUser = currentUser,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToProfile = { userId ->
+                        navController.navigate("profile/$userId")
+                    }
                 )
             }
 

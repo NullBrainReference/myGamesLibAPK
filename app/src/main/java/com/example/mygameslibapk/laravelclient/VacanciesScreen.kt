@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,7 +24,9 @@ import com.example.mygameslibapk.laravelclient.*
 fun VacanciesScreen(
     projectId: Int,
     isOwnerOrAdmin: Boolean,
+    currentUser: UserDto? = null,
     onBack: () -> Unit,
+    onNavigateToProfile: (userId: Int) -> Unit = {},
     viewModel: VacanciesViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -54,8 +57,8 @@ fun VacanciesScreen(
                 },
                 actions = {
                     if (isOwnerOrAdmin) {
-                        TextButton(onClick = { showSlotRequestDialog = true }) {
-                            Text("Request Slots")
+                        IconButton(onClick = { showSlotRequestDialog = true }) {
+                            Icon(Icons.Default.Work, contentDescription = "Request Position Slots")
                         }
                     }
                 }
@@ -64,7 +67,7 @@ fun VacanciesScreen(
         floatingActionButton = {
             if (isOwnerOrAdmin) {
                 FloatingActionButton(onClick = { showCreateDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Create Vacancy")
+                    Icon(Icons.Default.Add, contentDescription = "Create Vacancy Direct")
                 }
             }
         }
@@ -78,71 +81,174 @@ fun VacanciesScreen(
                 is VacanciesUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 is VacanciesUiState.Error -> Text(text = state.message, modifier = Modifier.align(Alignment.Center))
                 is VacanciesUiState.Success -> {
-                    if (state.positions.isEmpty()) {
-                        Column(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("No open positions available.")
-                            if (isOwnerOrAdmin) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = { showSlotRequestDialog = true }) {
-                                    Text("Request Position Slots from Admin")
+                    Column(modifier = Modifier.fillMaxSize()) {
+
+                        // Owner / Admin Quick Action Header Controls
+                        if (isOwnerOrAdmin) {
+                            Surface(tonalElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { showSlotRequestDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Work, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Request Slots", style = MaterialTheme.typography.labelSmall)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            if (state.positions.isNotEmpty()) {
+                                                selectedPositionToExtend = state.positions.first()
+                                            } else {
+                                                Toast.makeText(context, "No open positions available to extend.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Request Tickets", style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(state.positions) { position ->
-                                val takenTickets = position.tickets.size
-                                val hasCapacity = takenTickets < position.ticketsAmount
 
-                                Card(modifier = Modifier.fillMaxWidth()) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(position.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(position.description, style = MaterialTheme.typography.bodyMedium)
-
+                        if (state.positions.isEmpty()) {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("No open positions available.")
+                                    if (isOwnerOrAdmin) {
                                         Spacer(modifier = Modifier.height(8.dp))
-
-                                        if (position.skills.isNotEmpty()) {
-                                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                position.skills.forEach { skill ->
-                                                    SuggestionChip(onClick = {}, label = { Text(skill.title) })
-                                                }
-                                            }
+                                        Button(onClick = { showSlotRequestDialog = true }) {
+                                            Text("Request Position Slots from Admin")
                                         }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                items(state.positions) { position ->
+                                    val takenTickets = position.tickets.size
+                                    val hasCapacity = takenTickets < position.ticketsAmount
 
-                                        Spacer(modifier = Modifier.height(8.dp))
+                                    val acceptedTickets = position.tickets.filter { it.success == true }
+                                    val hasApprovedUser = acceptedTickets.isNotEmpty()
+                                    val userTicket = position.tickets.find { it.userId == currentUser?.id }
 
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
+                                    Card(modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.padding(16.dp)) {
                                             Text(
-                                                "Capacity: $takenTickets / ${position.ticketsAmount}",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = if (hasCapacity) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                                                position.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
                                             )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(position.description, style = MaterialTheme.typography.bodyMedium)
 
-                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                if (isOwnerOrAdmin) {
-                                                    OutlinedButton(onClick = { selectedPositionToExtend = position }) {
-                                                        Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                        Spacer(modifier = Modifier.width(4.dp))
-                                                        Text("Request Tickets", style = MaterialTheme.typography.labelSmall)
+                                            // Required Skills List
+                                            if (position.skills.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    position.skills.forEach { skill ->
+                                                        SuggestionChip(onClick = {}, label = { Text(skill.title) })
                                                     }
                                                 }
+                                            }
 
-                                                Button(
-                                                    onClick = { selectedPositionToApply = position },
-                                                    enabled = hasCapacity
-                                                ) {
-                                                    Text(if (hasCapacity) "Apply Now" else "Full")
+                                            // Render Approved Team Members with Profile Navigation
+                                            if (hasApprovedUser) {
+                                                Spacer(modifier = Modifier.height(10.dp))
+                                                HorizontalDivider()
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    "APPROVED MEMBERS:",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    acceptedTickets.forEach { ticket ->
+                                                        AssistChip(
+                                                            onClick = { onNavigateToProfile(ticket.userId) },
+                                                            label = { Text("✅ ${ticket.user?.name ?: "User #${ticket.userId}"}") },
+                                                            colors = AssistChipDefaults.assistChipColors(
+                                                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            HorizontalDivider()
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // CHANGE 2: Hide ticket capacity indicator when position has an approved user
+                                                if (!hasApprovedUser) {
+                                                    Text(
+                                                        "Capacity: $takenTickets / ${position.ticketsAmount}",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = if (hasCapacity) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                                                    )
+                                                } else {
+                                                    Spacer(modifier = Modifier.width(1.dp))
+                                                }
+
+                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    // CHANGE 2: Hide "Request Tickets" shortcut button for cards with an approved user
+                                                    if (isOwnerOrAdmin && !hasApprovedUser) {
+                                                        OutlinedButton(
+                                                            onClick = { selectedPositionToExtend = position },
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                        ) {
+                                                            Icon(Icons.Default.ConfirmationNumber, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                            Spacer(modifier = Modifier.width(4.dp))
+                                                            Text("Req Tickets", style = MaterialTheme.typography.labelSmall)
+                                                        }
+                                                    }
+
+                                                    // Application Button State
+                                                    when {
+                                                        userTicket?.success == true -> {
+                                                            Button(onClick = {}, enabled = false) { Text("Hired") }
+                                                        }
+                                                        userTicket?.success == false -> {
+                                                            OutlinedButton(onClick = {}, enabled = false) { Text("Declined") }
+                                                        }
+                                                        userTicket?.success == null && userTicket != null -> {
+                                                            OutlinedButton(onClick = {}, enabled = false) { Text("Pending") }
+                                                        }
+                                                        else -> {
+                                                            if (!hasApprovedUser) {
+                                                                Button(
+                                                                    onClick = { selectedPositionToApply = position },
+                                                                    enabled = hasCapacity
+                                                                ) {
+                                                                    Text(if (hasCapacity) "Apply Now" else "Full")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -189,14 +295,14 @@ fun VacanciesScreen(
         )
     }
 
-    // Request Ticket Capacity Extension Dialog
+    // Request Ticket Extension Dialog
     selectedPositionToExtend?.let { position ->
         var quantity by remember { mutableStateOf("2") }
         var reason by remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { selectedPositionToExtend = null },
-            title = { Text("Extend Tickets for ${position.title}") },
+            title = { Text("Request Tickets for ${position.title}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Additional Tickets Quantity") })
@@ -227,10 +333,10 @@ fun VacanciesScreen(
 
         AlertDialog(
             onDismissRequest = { showSlotRequestDialog = false },
-            title = { Text("Request Position Slots") },
+            title = { Text("Request New Position Slots") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = positionTitle, onValueChange = { positionTitle = it }, label = { Text("Requested Position Title (e.g. 3D Artist)") })
+                    OutlinedTextField(value = positionTitle, onValueChange = { positionTitle = it }, label = { Text("Requested Position Title") })
                     OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Quantity") })
                     OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason for Admins") }, minLines = 2)
                 }
@@ -260,7 +366,7 @@ fun VacanciesScreen(
 
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Post New Position") },
+            title = { Text("Post New Position Directly") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Position Title") })
