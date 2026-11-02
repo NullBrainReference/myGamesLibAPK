@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mygameslibapk.chat.ConversationContactDto
 import kotlinx.coroutines.launch
 
 sealed interface MessagesUiState {

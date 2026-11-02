@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mygameslibapk.laravelclient.FriendsUiState
-import com.example.mygameslibapk.laravelclient.FriendsViewModel
+import com.example.mygameslibapk.friends.FriendsUiState
+import com.example.mygameslibapk.friends.FriendsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

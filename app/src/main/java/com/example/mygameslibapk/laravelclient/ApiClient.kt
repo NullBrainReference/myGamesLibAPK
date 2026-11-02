@@ -1,6 +1,13 @@
 package com.example.mygameslibapk.laravelclient
 
 import android.content.Context
+import com.example.mygameslibapk.chat.ChatThreadResponse
+import com.example.mygameslibapk.chat.ConversationsResponse
+import com.example.mygameslibapk.chat.FriendsListResponse
+import com.example.mygameslibapk.chat.MessageDto
+import com.example.mygameslibapk.chat.SendMessageRequest
+import com.example.mygameslibapk.notifications.MarkReadResponse
+import com.example.mygameslibapk.notifications.NotificationsApiResponse
 import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -108,6 +115,15 @@ interface ApiService {
         @Path("projectId") projectId: Int,
         @Body request: RequestPositionSlotsRequest
     ): Response<ApiResponse<Unit>>
+
+    @GET("notifications")
+    suspend fun getNotifications(): Response<NotificationsApiResponse>
+
+    @POST("notifications/{id}/read")
+    suspend fun markNotificationAsRead(@Path("id") id: Int): Response<MarkReadResponse>
+
+    @POST("notifications/mark-all-read")
+    suspend fun markAllNotificationsAsRead(): Response<MarkReadResponse>
 }
 
 object ApiClient {

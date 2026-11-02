@@ -1,6 +1,5 @@
-package com.example.mygameslibapk
+package com.example.mygameslibapk.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,13 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mygameslibapk.laravelclient.ChatUiState
-import com.example.mygameslibapk.laravelclient.ChatViewModel
-import com.example.mygameslibapk.laravelclient.MessageDto
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -61,8 +55,11 @@ fun ChatScreen(
                         if (state.messages.isEmpty()) {
                             Text("No messages yet. Say hi!", modifier = Modifier.align(Alignment.Center))
                         } else {
+                            // Automatically scroll down when message count changes
                             LaunchedEffect(state.messages.size) {
-                                listState.animateScrollToItem(state.messages.size - 1)
+                                if (state.messages.isNotEmpty()) {
+                                    listState.animateScrollToItem(state.messages.size - 1)
+                                }
                             }
 
                             LazyColumn(
@@ -71,7 +68,7 @@ fun ChatScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(state.messages) { message ->
+                                items(state.messages, key = { it.id }) { message ->
                                     val isMe = message.senderId == currentUserId
                                     MessageBubble(message = message, isMe = isMe)
                                 }

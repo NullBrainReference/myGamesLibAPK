@@ -1,4 +1,4 @@
-package com.example.mygameslibapk.laravelclient
+package com.example.mygameslibapk.friends
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mygameslibapk.laravelclient.ApiClient
+import com.example.mygameslibapk.laravelclient.UserDto
 import kotlinx.coroutines.launch
 
 sealed interface FriendsUiState {

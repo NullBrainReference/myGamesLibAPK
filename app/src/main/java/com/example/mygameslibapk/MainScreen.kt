@@ -1,11 +1,9 @@
 package com.example.mygameslibapk
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,11 +14,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.mygameslibapk.chat.ChatScreen
+import com.example.mygameslibapk.chat.MessagesScreen
 import com.example.mygameslibapk.laravelclient.ProfileViewModel
+import com.example.mygameslibapk.notifications.NotificationsScreen
+import com.example.mygameslibapk.notifications.NotificationsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     profileViewModel: ProfileViewModel = viewModel(),
+    notificationsViewModel: NotificationsViewModel = viewModel(),
     onLogout: () -> Unit = {}
 ) {
     val navController = rememberNavController()
@@ -39,6 +43,31 @@ fun MainScreen(
     val showBottomBar = items.any { it.route == currentRoute }
 
     Scaffold(
+        topBar = {
+            if (showBottomBar) {
+                TopAppBar(
+                    title = { Text("myGamesLib") },
+                    actions = {
+                        IconButton(onClick = { navController.navigate("notifications") }) {
+                            BadgedBox(
+                                badge = {
+                                    if (notificationsViewModel.unreadCount > 0) {
+                                        Badge {
+                                            Text(notificationsViewModel.unreadCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifications"
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+        },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
@@ -69,6 +98,14 @@ fun MainScreen(
             startDestination = Screen.Projects.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // Notifications Screen Route
+            composable("notifications") {
+                NotificationsScreen(
+                    viewModel = notificationsViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             // Projects List Route
             composable(Screen.Projects.route) {
                 ProjectsScreen(
@@ -82,7 +119,7 @@ fun MainScreen(
                 )
             }
 
-            // Vacancies Route with correct isOwnerOrAdmin parameter
+            // Vacancies Route
             composable(
                 route = "projects/{projectId}/vacancies/{isOwnerOrAdmin}",
                 arguments = listOf(
@@ -130,7 +167,7 @@ fun MainScreen(
                 )
             }
 
-            // Direct One-on-One Chat Screen
+            // Direct Chat Screen
             composable(
                 route = "chat/{userId}/{userName}",
                 arguments = listOf(
@@ -149,6 +186,7 @@ fun MainScreen(
                 )
             }
 
+            // Profile Screen
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     profileViewModel = profileViewModel,

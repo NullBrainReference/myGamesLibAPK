@@ -1,5 +1,6 @@
-package com.example.mygameslibapk.laravelclient
+package com.example.mygameslibapk.chat
 
+import com.example.mygameslibapk.laravelclient.UserDto
 import com.google.gson.annotations.SerializedName
 
 data class MessageDto(

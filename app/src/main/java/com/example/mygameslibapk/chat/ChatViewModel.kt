@@ -1,4 +1,4 @@
-package com.example.mygameslibapk.laravelclient
+package com.example.mygameslibapk.chat
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mygameslibapk.laravelclient.ApiClient
+import com.example.mygameslibapk.laravelclient.UserDto
 import kotlinx.coroutines.launch
 
 sealed interface ChatUiState {
@@ -19,8 +21,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     var uiState by mutableStateOf<ChatUiState>(ChatUiState.Loading)
         private set
 
-    fun loadChat(userId: Int) {
+    fun loadChat(userId: Int, isSilentReload: Boolean = false) {
         viewModelScope.launch {
+            if (!isSilentReload) {
+                uiState = ChatUiState.Loading
+            }
             try {
                 val apiService = ApiClient.getService(getApplication())
                 val response = apiService.getChatMessages(userId)
@@ -29,10 +34,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val body = response.body()!!
                     uiState = ChatUiState.Success(body.contact, body.messages)
                 } else {
-                    uiState = ChatUiState.Error("Failed to load conversation (${response.code()})")
+                    if (!isSilentReload) {
+                        uiState = ChatUiState.Error("Failed to load conversation (${response.code()})")
+                    }
                 }
             } catch (e: Exception) {
-                uiState = ChatUiState.Error("Network error: ${e.localizedMessage}")
+                if (!isSilentReload) {
+                    uiState = ChatUiState.Error("Network error: ${e.localizedMessage}")
+                }
             }
         }
     }
@@ -46,7 +55,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (response.isSuccessful) {
                     onSent()
-                    loadChat(userId)
+                    // Silent reload preserves current screen state while updating message list
+                    loadChat(userId, isSilentReload = true)
                 }
             } catch (_: Exception) {}
         }
